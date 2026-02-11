@@ -151,6 +151,7 @@
                 <directory>conf</directory>
                 <includes>
                     <include>*.jks</include>
+                    <include>**/*.btm</include>
                 </includes>
             </testResource>
         </testResources>
@@ -237,6 +238,11 @@
                     <filesets>
                         <fileset>
                             <directory>${basedir}/keystore</directory>
+                            <directory>${basedir}/test-output</directory>
+                            <directory>${basedir}/doc/build</directory>
+                            <directory>${basedir}/tutorial/build</directory>
+                            <directory>${basedir}/tmp</directory>
+                            <directory>${basedir}/dist</directory>
                         </fileset>
                     </filesets>
                 </configuration>
@@ -248,7 +254,7 @@
               <executions>
                  <execution>
                     <id>add-source</id>
-                    <phase>validate</phase>
+                    <phase>generate-sources</phase>
                     <goals>
                        <goal>add-source</goal>
                     </goals>
@@ -262,7 +268,7 @@
                  </execution>
                  <execution>
                     <id>add-test-source</id>
-                    <phase>validate</phase>
+                    <phase>generate-test-sources</phase>
                     <goals>
                        <goal>add-test-source</goal>
                     </goals>
@@ -389,6 +395,8 @@
                     <systemPropertyVariables>
                         <keystore.dir>${project.basedir}/keystore</keystore.dir>
                     </systemPropertyVariables>
+                    <argLine>-Djdk.attach.allowAttachSelf=true</argLine>
+                    <systemPropertiesFile>build.properties</systemPropertiesFile>
                 </configuration>
                 <executions>
                     <execution>
