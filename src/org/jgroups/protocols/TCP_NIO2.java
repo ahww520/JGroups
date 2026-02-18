@@ -66,11 +66,10 @@ public class TCP_NIO2 extends BasicTCP {
     @ManagedOperation(description="Prints send and receive buffers for all connections")
     public String printBuffers() {return server.printBuffers();}
 
-    @ManagedOperation(description="Clears all connections (they will get re-established). For testing only, don't use !")
-    public void clearConnections() {
-        server.clearConnections();
+    @Override public TCP_NIO2 clearConnections(boolean graceful) {
+        server.clearConnections(graceful);
+        return this;
     }
-
 
     @ManagedAttribute(description="Is the selector open")
     public boolean isSelectorOpen() {return server != null && server.selectorOpen();}

@@ -27,7 +27,6 @@ public class TcpServerTest {
 
     @BeforeMethod protected void init() throws Exception {
         srv_sock=new ServerSocket(0);
-    // Util.createServerSocket(new DefaultSocketFactory(), "srv-socket", null, 7500, 7600);
         assert !srv_sock.isClosed();
     }
 
@@ -67,11 +66,11 @@ public class TcpServerTest {
             catch(Exception e) {
             }
             finally {
-                Util.close(client);
+                close();
             }
         };
 
-        Runnable closer=() -> Util.close(client);
+        Runnable closer=this::close;
 
         Thread acceptor_thread=new Thread(acceptor);
         acceptor_thread.start();
@@ -99,4 +98,11 @@ public class TcpServerTest {
         assert !writer_thread.isAlive();
     }
 
+    protected void close() {
+        try {
+            client.close(false);
+        }
+        catch(IOException e) {
+        }
+    }
 }

@@ -31,15 +31,15 @@ import static java.nio.channels.SelectionKey.*;
  * @since  3.6.5
  */
 public class NioConnection extends Connection {
-    protected final SocketChannel channel;      // the channel to the peer
-    protected SelectionKey        key;
-    protected final Buffers       send_buf;     // send messages via gathering writes
-    protected final MessageReader message_reader;
-    protected final ByteBuffer    length_buf=ByteBuffer.allocate(Integer.BYTES); // reused: send the length of the next buf
-    protected boolean             copy_on_partial_write=true;
-    protected int                 partial_writes; // number of partial writes (write which did not write all bytes)
-    protected Buffers             peer_addr_recv_buf;
-
+    protected final SocketChannel     channel;      // the channel to the peer
+    protected SelectionKey            key;
+    protected final Buffers           send_buf;     // send messages via gathering writes
+    protected final MessageReader     message_reader;
+    protected final ByteBuffer        length_buf=ByteBuffer.allocate(Integer.BYTES); // reused: send the length of the next buf
+    protected boolean                 copy_on_partial_write=true;
+    protected int                     partial_writes; // number of partial writes (write which did not write all bytes)
+    protected Buffers                 peer_addr_recv_buf;
+    protected static final ByteBuffer GRACEFUL_CLOSE_BUF=ByteBuffer.allocate(Integer.BYTES).putInt(GRACEFUL_CLOSE).flip();
 
 
      /** Creates a connection stub and binds it, use {@link #connect(Address)} to connect */
@@ -53,7 +53,7 @@ public class NioConnection extends Connection {
         channel.configureBlocking(false);
         setSocketParameters(channel.socket());
         last_access=getTimestamp(); // last time a message was sent or received (ns)
-        message_reader=new MessageReader(channel, 1024, server.useDirectMemory()).maxLength(server.getMaxLength());
+        message_reader=new MessageReader(this, channel, 1024, server.useDirectMemory()).maxLength(server.getMaxLength());
     }
 
     public NioConnection(SocketChannel channel, NioBaseServer server) throws Exception {
@@ -67,7 +67,7 @@ public class NioConnection extends Connection {
         } else {
             peer_addr=new IpAddress((InetSocketAddress)channel.getRemoteAddress());
         }
-        message_reader=new MessageReader(channel, 1024, server.useDirectMemory()).maxLength(server.getMaxLength());
+        message_reader=new MessageReader(this, channel, 1024, server.useDirectMemory()).maxLength(server.getMaxLength());
         last_access=getTimestamp(); // last time a message was sent or received (ns)
     }
 
@@ -175,17 +175,25 @@ public class NioConnection extends Connection {
         }
     }
 
-    public void send() throws Exception {
+    /**
+     * Sends the buffers currently present in send_buf
+     * @return True if all buffers were sent successfully, false otherwise
+     * @throws Exception If the send failed, e.g. because the channel was closed
+     */
+    public boolean send() throws Exception {
         send_lock.lock();
         try {
             boolean success=send_buf.write(channel);
-            if(success)
+            if(success) {
                 clearSelectionKey(OP_WRITE);
+                return true;
+            }
             else {
                 // copy data on partial write as further writes might corrupt data (https://issues.redhat.com/browse/JGRP-1991)
                 if(copy_on_partial_write)
                     send_buf.copy();
                 partial_writes++;
+                return false;
             }
         }
         finally {
@@ -229,16 +237,16 @@ public class NioConnection extends Connection {
 
     @Override
     public void close() throws IOException {
-        send_lock.lock();
-        try {
-            if(send_buf.remaining() > 0) { // try to flush send buffer if it still has pending data to send
-                try {send();} catch(Throwable e) {}
-            }
-            server.socketFactory().close(channel);
-        }
-        finally {
-            send_lock.unlock();
-        }
+        close(true);
+    }
+
+    @Override
+    public void close(boolean graceful) throws IOException {
+        if(isClosed())
+            return;
+        if(graceful)
+            send_buf.add(GRACEFUL_CLOSE_BUF);
+        doClose(); // flushes send_buf
     }
 
     public void flush() {
@@ -267,11 +275,17 @@ public class NioConnection extends Connection {
     @Override
     public String status() {
         if(channel == null)       return "n/a";
-        if(isClosed())            return "closed";
+        if(isClosed())            return closed_gracefully? "closed gracefully" : "closed";
         if(isConnected())         return "connected";
         if(isConnectionPending()) return "connection pending";
         return                           "open";
     }
+
+    protected void doClose() {
+        flush();
+        server.socketFactory().close(channel);
+    }
+
 
     protected void setSocketParameters(Socket client_sock) throws SocketException {
         try {

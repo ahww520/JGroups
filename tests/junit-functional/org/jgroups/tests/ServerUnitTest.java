@@ -219,10 +219,8 @@ public class ServerUnitTest {
         }
     }
 
-
     public void testConnectionCountOnStop() throws Exception {
         for(boolean nio: new boolean[]{false, true}) {
-       //  for(boolean nio: new boolean[]{true}) {
             try(BaseServer a=create(nio, 0);
                 BaseServer b=create(nio, 0)) {
                 Address addr_a=a.localAddress(), addr_b=b.localAddress();
@@ -253,7 +251,6 @@ public class ServerUnitTest {
             }
         }
     }
-
 
     public void testAsyncConnectThenSend() throws Exception {
         try(NioServer a=(NioServer)create(true, 0); NioServer b=(NioServer)create(true, 0)) {

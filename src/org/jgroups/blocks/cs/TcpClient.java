@@ -4,6 +4,7 @@ import org.jgroups.Address;
 import org.jgroups.stack.IpAddress;
 import org.jgroups.util.*;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 
@@ -56,8 +57,6 @@ public class TcpClient extends TcpBaseServer implements Client, ConnectionListen
     @Override public boolean isConnected()                 {return conn != null && conn.isConnected();}
 
 
-
-
     @Override
     public void start() throws Exception {
         if(running.compareAndSet(false, true)) {
@@ -73,10 +72,11 @@ public class TcpClient extends TcpBaseServer implements Client, ConnectionListen
 
     @Override
     public void stop() {
-        if(running.compareAndSet(true, false)) {
-            Util.close(conn);
-            super.stop();
-        }
+        doStop(true);
+    }
+
+    public void close(boolean graceful) throws IOException {
+        doStop(graceful);
     }
 
     @Override
@@ -122,5 +122,16 @@ public class TcpClient extends TcpBaseServer implements Client, ConnectionListen
             conn.sendLocalAddress(local_addr);
         notifyConnectionEstablished(conn);
         conn.start(); // starts the receiver thread
+    }
+
+    protected void doStop(boolean graceful) {
+        if(running.compareAndSet(true, false)) {
+            try {
+                conn.close(graceful);
+            }
+            catch(IOException e) {
+            }
+            super.stop();
+        }
     }
 }
