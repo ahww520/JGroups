@@ -569,6 +569,10 @@ public class Util {
      * the view until failure detection has kicked in and the new coord installed the new view
      */
     public static void shutdown(JChannel ch) throws Exception {
+        shutdown(ch, true);
+    }
+
+    public static void shutdown(JChannel ch, boolean graceful_close) throws Exception {
         DISCARD discard=new DISCARD().setAddress(ch.getAddress()).discardAll(true);
         ch.stack().insertProtocol(discard,ProtocolStack.Position.ABOVE,TP.class);
 
@@ -576,6 +580,12 @@ public class Util {
         FD_SOCK fd=ch.getProtocolStack().findProtocol(FD_SOCK.class);
         if(fd != null)
             fd.stopServerSocket(false);
+
+        if(!graceful_close) {
+            TP transport=ch.stack().getTransport();
+            if(transport instanceof BasicTCP)
+                ((BasicTCP)transport).clearConnections(false); // closes connections ungracefully
+        }
 
         View view=ch.getView();
         if(view != null) {

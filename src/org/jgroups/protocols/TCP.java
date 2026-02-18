@@ -101,9 +101,10 @@ public class TCP extends BasicTCP {
         return srv.printConnections();
     }
 
-    @ManagedOperation(description="Clears all connections (they will get re-established). For testing only, don't use !")
-    public TCP clearConnections() {
-        srv.clearConnections(); return this;}
+    public TCP clearConnections(boolean graceful) {
+        srv.clearConnections(graceful);
+        return this;
+    }
 
     @Override public void setSocketFactory(SocketFactory factory) {
         super.setSocketFactory(factory);

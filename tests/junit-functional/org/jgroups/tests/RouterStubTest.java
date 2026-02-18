@@ -99,6 +99,5 @@ public class RouterStubTest {
         Util.waitUntilTrue(5000, 500, () -> stub_a.isConnected() && stub_b.isConnected());
         assert stub_a.isConnected();
         assert stub_b.isConnected();
-
     }
 }

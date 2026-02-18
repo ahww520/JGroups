@@ -1,5 +1,7 @@
 package org.jgroups.nio;
 
+import org.jgroups.blocks.cs.Connection;
+import org.jgroups.blocks.cs.NioConnection;
 import org.jgroups.util.Util;
 
 import java.io.EOFException;
@@ -23,12 +25,19 @@ public class MessageReader {
     private int readerIndex;
     protected int max_length; // max number of bytes to read (JGRP-2523)
     protected boolean use_direct_buffers;
+    protected final NioConnection conn;
+
 
     public MessageReader(SocketChannel channel) {
-        this(channel, 1024, true);
+        this(null, channel, 1024, true);
     }
 
-    public MessageReader(SocketChannel channel, int initial_buf_size, boolean use_direct_buffers) {
+    public MessageReader(NioConnection c, SocketChannel channel) {
+        this(c, channel, 1024, true);
+    }
+
+    public MessageReader(NioConnection c, SocketChannel channel, int initial_buf_size, boolean use_direct_buffers) {
+        this.conn=c;
         this.channel = channel;
         this.use_direct_buffers = use_direct_buffers;
         buffer = use_direct_buffers? ByteBuffer.allocateDirect(initial_buf_size) : ByteBuffer.allocate(initial_buf_size);
@@ -64,6 +73,11 @@ public class MessageReader {
 
         // We have at least length
         int length = getLength();
+        if(length == Connection.GRACEFUL_CLOSE) {
+            readerIndex+=Integer.BYTES;
+            conn.setClosedGracefully(true);
+            return null;
+        }
 
         // Check if we have a full message
         if ((message = tryGetMessage(length)) != null) {

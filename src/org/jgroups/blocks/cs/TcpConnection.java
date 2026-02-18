@@ -29,7 +29,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  */
 public class TcpConnection extends Connection {
     protected final Socket        sock; // socket to/from peer (result of srv_sock.accept() or new Socket())
-    protected OutputStream        out;
+    protected DataOutputStream    out;
     protected DataInputStream     in;
     protected volatile Receiver   receiver;
     protected final AtomicInteger writers=new AtomicInteger(0); // to determine the last writer to flush
@@ -175,9 +175,9 @@ public class TcpConnection extends Connection {
         }
     }
 
-    protected OutputStream createDataOutputStream(OutputStream out) {
+    protected DataOutputStream createDataOutputStream(OutputStream out) {
         int size=((TcpBaseServer)server).getBufferedOutputStreamSize();
-        return size == 0? out : new BufferedOutputStream(out, size);
+        return size == 0? new DataOutputStream(out) : new DataOutputStream(new BufferedOutputStream(out, size));
     }
 
     protected DataInputStream createDataInputStream(InputStream in) {
@@ -273,7 +273,6 @@ public class TcpConnection extends Connection {
             recv=f.newThread(this,"Connection.Receiver [" + getSockAddress() + "]");
         }
 
-
         public Receiver start() {
             receiving=true;
             recv.start();
@@ -292,6 +291,11 @@ public class TcpConnection extends Connection {
             try {
                 while(canRun()) {
                     int len=in.readInt(); // needed to read messages from TCP_NIO2
+                    if(len == GRACEFUL_CLOSE) {
+                        closed_gracefully=true;
+                        server.log.trace("%s: received graceful close from %s", server.local_addr, peer_addr);
+                        break;
+                    }
                     server.receive(peer_addr, in, len);
                     updateLastAccessed();
                 }
@@ -335,7 +339,7 @@ public class TcpConnection extends Connection {
     @Override
     public String status() {
         if(sock == null)  return "n/a";
-        if(isClosed())    return "closed";
+        if(isClosed())    return closed_gracefully? "closed gracefully" : "closed";
         if(isConnected()) return "connected";
         return                   "open";
     }
@@ -353,6 +357,21 @@ public class TcpConnection extends Connection {
     }
 
     @Override public void close() throws IOException {
+        close(true);
+    }
+
+    @Override
+    public void close(boolean graceful) throws IOException {
+        if(graceful) {
+            sock.shutdownInput();
+            out.writeInt(Connection.GRACEFUL_CLOSE);
+            out.flush();
+            sock.shutdownOutput();
+        }
+        doClose();
+    }
+
+    protected void doClose() {
         Util.close(sock); // fix for https://issues.redhat.com/browse/JGRP-2350
         Receiver r=receiver;
         if(r != null) {

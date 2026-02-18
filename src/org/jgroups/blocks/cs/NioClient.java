@@ -4,6 +4,7 @@ import org.jgroups.Address;
 import org.jgroups.stack.IpAddress;
 import org.jgroups.util.*;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Selector;
@@ -50,8 +51,6 @@ public class NioClient extends NioBaseServer implements Client {
         this.remote_addr=new IpAddress(server_addr, server_port);
     }
 
-
-
     public Address           remoteAddress()               {return remote_addr;}
     /** Sets the address of the server. Has no effect when already connected. */
     public NioClient         remoteAddress(IpAddress addr) {this.remote_addr=addr; return this;}
@@ -75,6 +74,10 @@ public class NioClient extends NioBaseServer implements Client {
         super.stop();
         if(running.compareAndSet(true, false))
             Util.close(selector,conn); // closing the selector also stops the acceptor thread
+    }
+
+    public void close(boolean graceful) throws IOException {
+        doStop(graceful);
     }
 
     @Override
@@ -117,6 +120,18 @@ public class NioClient extends NioBaseServer implements Client {
         acceptor=factory.newThread(new Acceptor(), "NioClient.Acceptor [srv=" + remote_addr + "]");
         acceptor.setDaemon(true);
         acceptor.start();
+    }
+
+    protected void doStop(boolean graceful) {
+        super.stop();
+        if(running.compareAndSet(true, false)) {
+            Util.close(selector); // closing the selector also stops the acceptor thread
+            try {
+                conn.close(graceful);
+            }
+            catch(IOException e) {
+            }
+        }
     }
 
 }

@@ -434,7 +434,17 @@ public abstract class BaseServer implements Closeable, ConnectionListener {
 
     /** Used only for testing ! */
     public void clearConnections() {
-        conns.values().forEach(Util::close);
+        clearConnections(true);
+    }
+
+    public void clearConnections(boolean graceful) {
+        conns.values().forEach(c -> {
+            try {
+                c.close(graceful);
+            }
+            catch(Throwable e) {
+            }
+        });
         conns.clear();
     }
 

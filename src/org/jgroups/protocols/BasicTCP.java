@@ -6,6 +6,7 @@ import org.jgroups.Global;
 import org.jgroups.PhysicalAddress;
 import org.jgroups.annotations.LocalAddress;
 import org.jgroups.annotations.ManagedAttribute;
+import org.jgroups.annotations.ManagedOperation;
 import org.jgroups.annotations.Property;
 import org.jgroups.blocks.cs.Connection;
 import org.jgroups.blocks.cs.ConnectionListener;
@@ -166,8 +167,6 @@ public abstract class BasicTCP extends TP implements Receiver, ConnectionListene
                                                      ", as no dynamic discovery protocol (e.g. MPING or TCPGOSSIP) has been detected.");
         }
         if(reaper_interval > 0 || conn_expire_time > 0) {
-            if(enable_suspect_events)
-                log.warn("reaping is enabled, but also suspect events; this is not recommended");
             if(conn_expire_time == 0 && reaper_interval > 0) {
                 log.warn("reaper interval (%d) set, but not conn_expire_time, disabling reaping", reaper_interval);
                 reaper_interval=0;
@@ -188,6 +187,9 @@ public abstract class BasicTCP extends TP implements Receiver, ConnectionListene
     }
 
     public abstract String printConnections();
+
+    @ManagedOperation(description="Clears all connections (they will get re-established). For testing only, don't use !")
+    public abstract BasicTCP clearConnections(boolean graceful);
 
     public abstract void send(Address dest, byte[] data, int offset, int length) throws Exception;
 
@@ -216,15 +218,13 @@ public abstract class BasicTCP extends TP implements Receiver, ConnectionListene
 
     @Override
     public void connectionClosed(Connection conn) {
-        if(!enable_suspect_events)
+        if(!enable_suspect_events || conn.isClosedGracefully())
             return;
         Address peer_ip=conn.peerAddress();
         Address peer=peer_ip != null? logical_addr_cache.getByValue((PhysicalAddress)peer_ip) : null;
         if(peer != null && members.contains(peer) && connected &&
           Optional.ofNullable(stack.<GMS>findProtocol(GMS.class)).filter(Predicate.not(GMS::isLeaving)).isPresent()) {
-            if(log.isDebugEnabled())
-                log.debug("%s: connection closed by peer %s (IP=%s), sending up a suspect event",
-                          local_addr, peer, peer_ip);
+            log.debug("%s: connection closed by peer %s (IP=%s), sending up a suspect event", local_addr, peer, peer_ip);
             Event suspect=new Event(Event.SUSPECT, List.of(peer));
             Runnable r=() -> up_prot.up(suspect);
             boolean rc=thread_pool.execute(r);
