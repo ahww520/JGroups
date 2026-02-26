@@ -244,7 +244,7 @@ public class NioConnection extends Connection {
     public void close(boolean graceful) throws IOException {
         if(isClosed())
             return;
-        if(graceful)
+        if(graceful && !closed_gracefully)
             send_buf.add(GRACEFUL_CLOSE_BUF);
         doClose(); // flushes send_buf
     }
