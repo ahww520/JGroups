@@ -8,6 +8,8 @@ import org.jgroups.protocols.pbcast.GMS;
 import org.jgroups.stack.DiagnosticsHandler;
 import org.jgroups.util.ThreadFactory;
 import org.jgroups.util.Util;
+import org.testng.SkipException;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
 import java.util.concurrent.CountDownLatch;
@@ -27,6 +29,15 @@ public class JDBC_PING2_Test {
     protected static final String CONFIG="jdbc-pg.xml";
     protected static final int NUM_NODES=8;
 
+
+    @BeforeTest
+    public void checkEnvironment() {
+        try {
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException e) {
+            throw new SkipException("Environment not set for JDBC_PING2_Test", e);
+        }
+    }
 
     public void testClusterFormedAfterRestart() throws Exception {
         try(var a=createChannel(CONFIG, "A")) {
