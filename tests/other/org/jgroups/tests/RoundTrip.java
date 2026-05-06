@@ -24,7 +24,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 public class RoundTrip implements RtReceiver {
     protected RtTransport                     tp;
     protected boolean                         direct_memory;
-    protected int                             num_msgs=500_000;
+    protected int                             num_msgs=100_000;
     protected int                             num_senders=1; // number of sender threads
     protected boolean                         details;
     protected static final byte               REQ=0, RSP=1, DONE=2, EXIT=3;
