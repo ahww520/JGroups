@@ -143,6 +143,9 @@ public class TcpTransport implements RtTransport {
                     if(receiver != null)
                         receiver.receive(null, buf, 0, buf.length);
                 }
+                catch(IOException ioe) {
+                    break;
+                }
                 catch(Exception e) {
                     e.printStackTrace();
                 }
