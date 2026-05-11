@@ -25,11 +25,11 @@ public class PromiseTest {
     }
 
     public void testGetResultNoTimeout() {
-        final Promise p=new Promise();
-        Object result;
+        final Promise<Boolean> p=new Promise<>();
+        Boolean result;
         new ResultSetter(p, 500).start();
         result=p.getResult(0);
-        Assert.assertEquals(Boolean.TRUE, result);
+        assert result == true;
     }
 
     public void testGetResultWithReset() {

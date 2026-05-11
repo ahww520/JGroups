@@ -95,17 +95,20 @@ public class Promise<T> {
      * Sets the result and notifies any threads waiting for it
      */
     public void setResult(T obj) {
+        setResult(obj, true);
+    }
+
+    public void setResult(T obj, boolean signal_all) {
         lock.lock();
         try {
             result=obj;
             hasResult=true;
-            cond.signal(true);
+            cond.signal(signal_all);
         }
         finally {
             lock.unlock();
         }
     }
-
 
     /**
      * Causes all waiting threads to return
