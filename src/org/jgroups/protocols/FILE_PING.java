@@ -285,14 +285,14 @@ public class FILE_PING extends Discovery {
                     log.warn("failed reading " + file.getAbsolutePath());
                     continue;
                 }
+                for(PingData data: list) {
+                    if(members == null || members.contains(data.getAddress()))
+                        responses.addResponse(data, true);
+                    if(local_addr != null && !local_addr.equals(data.getAddress()))
+                        addDiscoveryResponseToCaches(data.getAddress(), data.getLogicalName(), data.getPhysicalAddr());
+                }
             }
             catch(Exception e) {
-            }
-            for(PingData data: list) {
-                if(members == null || members.contains(data.getAddress()))
-                    responses.addResponse(data, true);
-                if(local_addr != null && !local_addr.equals(data.getAddress()))
-                    addDiscoveryResponseToCaches(data.getAddress(), data.getLogicalName(), data.getPhysicalAddr());
             }
         }
     }
