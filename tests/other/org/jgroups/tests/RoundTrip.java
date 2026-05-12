@@ -114,7 +114,8 @@ public class RoundTrip implements RtReceiver {
         switch(b) {
             case REQ:
                 short id=buf.getShort();
-                buf.position(0).put(RSP).putShort(id).flip();
+                buf.put(0, RSP).putShort(1, id);
+                buf.clear();
                 try {
                     long start=System.nanoTime();
                     tp.send(sender, buf);
@@ -276,6 +277,7 @@ public class RoundTrip implements RtReceiver {
                     System.out.print(".");
 
                 promise.reset(false);
+                buf.clear();
 
                 // The request contains
                 // * the type of the message (byte): REQ or RSP (or DONE)
