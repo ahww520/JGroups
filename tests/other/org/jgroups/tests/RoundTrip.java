@@ -87,7 +87,7 @@ public class RoundTrip implements RtReceiver {
                 break;
             case RSP:
                 id=Bits.readShort(req_buf, 1);
-                senders[id].promise.setResult(true); // notify the sender of the response
+                senders[id].promise.setResult(true, false); // notify the sender of the response
                 rsp_delivery_time.add(System.nanoTime() - msg_start);
                 break;
             case DONE:
@@ -128,7 +128,7 @@ public class RoundTrip implements RtReceiver {
                 break;
             case RSP:
                 id=buf.getShort();
-                senders[id].promise.setResult(true); // notify the sender of the response
+                senders[id].promise.setResult(true, false); // notify the sender of the response
                 rsp_delivery_time.add(System.nanoTime() - msg_start);
                 break;
             case DONE:
@@ -249,7 +249,7 @@ public class RoundTrip implements RtReceiver {
         protected final Promise<Boolean> promise=new Promise<>(); // for the sender thread to wait for the response
         protected final int              print;
         protected final Object           target;
-        protected final AverageMinMax    rtt=new AverageMinMax().unit(NANOSECONDS); // client -> server -> client
+        protected final AverageMinMax    rtt=new AverageMinMax(2048).unit(NANOSECONDS); // client -> server -> client
 
         public Sender(short id, CountDownLatch latch, AtomicInteger sent_msgs, Object target) {
             this.id=id;
@@ -266,7 +266,7 @@ public class RoundTrip implements RtReceiver {
             catch(InterruptedException e) {
                 e.printStackTrace();
             }
-            ByteBuffer buf=direct_memory? ByteBuffer.allocateDirect(PAYLOAD): null;
+            ByteBuffer buf=direct_memory? ByteBuffer.allocateDirect(PAYLOAD): ByteBuffer.allocate(PAYLOAD);
             // use buf.order(ByteOrder.nativeOrder() to measure perf between systems of the *same* native byte order
             for(;;) {
                 int num=sent_msgs.incrementAndGet();
@@ -276,27 +276,14 @@ public class RoundTrip implements RtReceiver {
                     System.out.print(".");
 
                 promise.reset(false);
-                byte[] req_buf=null;
 
                 // The request contains
                 // * the type of the message (byte): REQ or RSP (or DONE)
                 // * the ID (short) of the sender thread (for response correlation)
-                if(direct_memory)
-                    buf.put(REQ).putShort(id).flip();
-                else {
-                    req_buf=new byte[PAYLOAD];
-                    req_buf[0]=REQ;
-                    Bits.writeShort(id, req_buf, 1);
-                }
-
+                buf.put(0, REQ).putShort(1, id);
                 try {
                     long start=System.nanoTime();
-                    if(direct_memory) {
-                        tp.send(target, buf);
-                        buf.flip();
-                    }
-                    else
-                        tp.send(target, req_buf, 0, req_buf.length);
+                    tp.send(target, buf);
                     long send_time=System.nanoTime() - start;
                     promise.getResult(0);
                     long rtt_time=System.nanoTime() - start;
