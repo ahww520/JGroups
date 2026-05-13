@@ -85,7 +85,8 @@ public class UdpTransport implements RtTransport {
     }
 
     public void send(Object dest, byte[] buf, int offset, int length) throws Exception {
-        DatagramPacket packet=new DatagramPacket(buf, offset, length, (SocketAddress)dest);
+        SocketAddress target=dest != null? (SocketAddress)dest : new InetSocketAddress(host, port);
+        DatagramPacket packet=new DatagramPacket(buf, offset, length, target);
         sock.send(packet);
     }
 
