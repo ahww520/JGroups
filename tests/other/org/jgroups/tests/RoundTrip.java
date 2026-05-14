@@ -87,7 +87,7 @@ public class RoundTrip implements RtReceiver {
                 break;
             case RSP:
                 id=Bits.readShort(req_buf, 1);
-                senders[id].promise.setResult(true, false); // notify the sender of the response
+                senders[id].promise.setResult(true, false); // notify all senders of the response
                 rsp_delivery_time.add(System.nanoTime() - msg_start);
                 break;
             case DONE:
