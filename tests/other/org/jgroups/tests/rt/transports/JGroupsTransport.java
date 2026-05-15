@@ -14,7 +14,7 @@ public class JGroupsTransport implements Receiver, RtTransport {
     protected JChannel     ch;
     protected RtReceiver   receiver;
     protected View         view;
-    protected boolean      oob, dont_bundle;
+    protected boolean      oob, dont_bundle, bypass_flowcontrol=true;
     protected final Log    log=LogFactory.getLog(JGroupsTransport.class);
 
 
@@ -22,7 +22,8 @@ public class JGroupsTransport implements Receiver, RtTransport {
     }
 
     public String[] options() {
-        return new String[]{"-props <props>", "-name <name>", "-oob true|false", "-dont_bundle true|false"};
+        return new String[]{"-props <props>", "-name <name>", "-oob true|false", "-dont_bundle true|false",
+          "bypass_flowcontrol"};
     }
 
     public void options(String... options) throws Exception {
@@ -35,7 +36,10 @@ public class JGroupsTransport implements Receiver, RtTransport {
             }
             if(options[i].startsWith("-dont_bundle")) {
                 dont_bundle=Boolean.parseBoolean(options[++i]);
+                continue;
             }
+            if(options[i].startsWith("bypass_flowcontrol"))
+                bypass_flowcontrol=Boolean.parseBoolean(options[++i]);
         }
     }
 
@@ -78,6 +82,8 @@ public class JGroupsTransport implements Receiver, RtTransport {
 
     public void send(Object dest, byte[] buf, int offset, int length) throws Exception {
         Message msg=new BytesMessage((Address)dest, buf, offset, length);
+        if(bypass_flowcontrol)
+            msg.setFlag(Message.Flag.NO_FC);
         if(oob)
             msg.setFlag(Message.Flag.OOB);
         if(dont_bundle)

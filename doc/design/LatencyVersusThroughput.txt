@@ -78,8 +78,8 @@ Same as receiving a request but without sending a response. Typically, this unbl
 the next request.
 
 
-Components to look at
----------------------
+Things to look at
+-----------------
 
 * Bundler type (TransferQueue, NoBundler, PerDestinationBundler)
   * Does the message submitted to the bundler cause the current thread to possibly send it? Or are messages added
@@ -103,6 +103,11 @@ Components to look at
 
 * BATCH{2}: batching on the sender side (many small requests), with or without batching in the bundler
 
+* TCP/IP: disable nagling (tcp_nodelay=true)
+
+* Use ZGC instead of G1 and tune for low pause times
+
+* Linux specific tunings are outside the scope of this document
 
 
 Recommendations
