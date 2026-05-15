@@ -13,15 +13,14 @@
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="urn:org:jgroups http://www.jgroups.org/schema/jgroups.xsd">
    <include file="${transport-config:tcp-default.xml}"
-          buffered_input_stream_size="8192"
-          buffered_output_stream_size="8192"
-
-          thread_pool.enabled="false"
-
-          thread_pool.max_threads="200"
-
-          use_virtual_threads="true"
-          bundler_type="no-bundler"
+            buffered_input_stream_size="8192"
+            buffered_output_stream_size="8192"
+            use_virtual_threads="true"
+            bundler_type="no-bundler"
+            use_lock_to_send="true"
+            message_processing_policy="all-direct"
+            stats="false"
+            tcp_nodelay="true"
    />
    <MPING mcast_addr="224.0.0.5" />
     <MERGE3 max_interval="2m"
